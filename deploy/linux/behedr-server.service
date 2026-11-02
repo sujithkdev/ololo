@@ -1,0 +1,27 @@
+[Unit]
+Description=BehEDR detection server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=behedr
+Group=behedr
+WorkingDirectory=/opt/behedr
+EnvironmentFile=/etc/behedr/server.env
+Environment=EDR_DATA_DIR=/var/lib/behedr
+Environment=EDR_LOG_DIR=/var/log/behedr
+Environment=EDR_HOST=127.0.0.1
+Environment=EDR_TLS_ENABLED=false
+StateDirectory=behedr
+LogsDirectory=behedr
+ExecStart=/opt/behedr/.venv/bin/python -m behedr_server
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

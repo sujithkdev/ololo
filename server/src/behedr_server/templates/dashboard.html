@@ -1,0 +1,2643 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>BehEDR &mdash; Security Operations</title><script src="https://d3js.org/d3.v7.min.js"></script><style>
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f7f8fa;--border:#e1e4e8;
+  --border2:#c9cdd2;--text:#1a1d23;--muted:#6b7280;--muted2:#9ca3af;
+  --accent:#0053a0;--accent-hover:#003e7a;--accent-light:#e8f0fb;
+  --critical:#7c0000;--critical-bg:#fff5f5;--critical-border:#feb2b2;
+  --high:#b91c1c;--high-bg:#fef2f2;--high-border:#fca5a5;
+  --medium:#92400e;--medium-bg:#fffbeb;--medium-border:#fcd34d;
+  --low:#065f46;--low-bg:#f0fdf4;--low-border:#6ee7b7;
+  --online:#059669;--offline:#6b7280;
+  --sidebar-w:228px;--header-h:54px;
+  --radius:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Arial,sans-serif;font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit;font-size:12px;background:#fff;color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,83,160,.1)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#9ca3af}
+/* LAYOUT */
+#app{display:flex;flex-direction:column;height:100vh}
+#header{height:var(--header-h);background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;z-index:100;box-shadow:var(--shadow)}
+#body{display:flex;flex:1;overflow:hidden}
+#sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#main{flex:1;overflow-y:auto;padding:24px;background:var(--bg)}
+/* HEADER */
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-name{font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.3px;line-height:1}
+.logo-tagline{font-size:10px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+.header-spacer{flex:1}
+.hdr-status{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--muted)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--offline);flex-shrink:0;transition:background .3s}
+.status-dot.connected{background:var(--online);box-shadow:0 0 0 2px rgba(5,150,105,.2)}
+.status-dot.disconnected{background:var(--high)}
+.hdr-clock{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px}
+/* SIDEBAR */
+.nav-product{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.nav-product-name{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px}
+.nav-group-label{padding:14px 16px 4px;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:1px 8px;border-radius:var(--radius);cursor:pointer;color:var(--muted);transition:all .15s;user-select:none;border:1px solid transparent}
+.nav-item:hover{background:var(--accent-light);color:var(--accent)}
+.nav-item.active{background:var(--accent-light);color:var(--accent);font-weight:600;border-color:rgba(0,83,160,.15)}
+.nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.6}
+.nav-item:hover .nav-icon,.nav-item.active .nav-icon{opacity:1}
+.nav-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-label{font-size:13px}
+.nav-badge{margin-left:auto;background:var(--high);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted2)}
+/* SECTIONS */
+.section{display:none}.section.active{display:block}
+/* PAGE HEADER */
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.page-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+/* STAT CARDS */
+.stat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative}
+.stat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--radius) 0 0 var(--radius)}
+.stat-card.c-blue::before{background:var(--accent)}
+.stat-card.c-slate::before{background:#64748b}
+.stat-card.c-violet::before{background:#6d28d9}
+.stat-card.c-red::before{background:var(--high)}
+.stat-card.c-amber::before{background:#d97706}
+.stat-card.c-green::before{background:var(--online)}
+.stat-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat-value{font-size:28px;font-weight:800;color:var(--text);line-height:1;font-variant-numeric:tabular-nums;transition:transform .2s}
+.stat-value.v-red{color:var(--high)}
+.stat-value.v-amber{color:#d97706}
+.stat-value.v-green{color:var(--online)}
+.stat-value.v-blue{color:var(--accent)}
+.stat-sub{font-size:11px;color:var(--muted2);margin-top:5px}
+/* PANELS */
+.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
+.panel-header{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:#fafafa}
+.panel-title{font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px}
+.panel-badge{font-size:11px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.panel-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+.panel-body{padding:16px}
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+/* TABLES */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead{background:#fafafa}
+th{text-align:left;padding:9px 12px;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fafafa}
+.td-mono{font-family:'SFMono-Regular','Consolas',monospace;font-size:11px}
+.td-truncate{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-muted{color:var(--muted)}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.badge.CRITICAL{background:var(--critical-bg);color:var(--critical);border:1px solid var(--critical-border);animation:crit-pulse 2s infinite}
+.badge.HIGH{background:var(--high-bg);color:var(--high);border:1px solid var(--high-border)}
+.badge.MEDIUM{background:var(--medium-bg);color:var(--medium);border:1px solid var(--medium-border)}
+.badge.LOW{background:var(--low-bg);color:var(--low);border:1px solid var(--low-border)}
+.badge.online{background:#ecfdf5;color:var(--online);border:1px solid #a7f3d0}
+.badge.offline{background:#f9fafb;color:var(--muted);border:1px solid var(--border2)}
+.badge.pending{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.badge.sent,.badge.executed{background:var(--low-bg);color:var(--low);border:1px solid var(--low-border)}
+.badge.error{background:var(--high-bg);color:var(--high);border:1px solid var(--high-border)}
+@keyframes crit-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,0,0,.25)}60%{box-shadow:0 0 0 5px rgba(124,0,0,0)}}
+/* SCORE BAR */
+.score-bar-wrap{display:flex;align-items:center;gap:8px}
+.score-bar{height:6px;border-radius:3px;background:var(--border);flex:1;overflow:hidden;min-width:60px}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.score-bar-fill.high{background:var(--high)}
+.score-bar-fill.med{background:#d97706}
+.score-bar-fill.low{background:var(--online)}
+.score-num{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:#fff;color:var(--text);font-size:12px;font-weight:500;transition:all .15s;cursor:pointer;white-space:nowrap}
+.btn svg{width:13px;height:13px;flex-shrink:0}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.danger{border-color:var(--high);color:var(--high);background:#fff}
+.btn.danger:hover{background:var(--high);color:#fff}
+.btn.success{border-color:var(--online);color:var(--online);background:#fff}
+.btn.success:hover{background:var(--online);color:#fff}
+.btn.warning{border-color:#d97706;color:#d97706;background:#fff}
+.btn.warning:hover{background:#d97706;color:#fff}
+.btn.sm{padding:5px 10px;font-size:11px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-bar input{flex:1;min-width:200px}
+.filter-bar select{min-width:130px}
+/* SYSTEM LIST */
+.sys-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.sys-row:last-child{border-bottom:none}
+.sys-ring{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sys-ring.online{background:var(--online);box-shadow:0 0 0 3px rgba(5,150,105,.15)}
+.sys-ring.offline{background:var(--muted2)}
+/* SYSTEM CARDS */
+.sys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.sys-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);transition:box-shadow .2s,border-color .2s}
+.sys-card:hover{box-shadow:var(--shadow-md);border-color:var(--accent)}
+.sys-card-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sys-avatar{width:36px;height:36px;border-radius:8px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sys-avatar svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.sys-card-name{font-weight:700;font-size:13px}
+.sys-card-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.sys-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.sys-meta-lbl{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.sys-meta-val{font-size:12px;font-weight:500}
+.sys-actions{display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border)}
+/* LIVE FEED */
+#live-feed{max-height:260px;overflow-y:auto;display:flex;flex-direction:column}
+.feed-entry{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.feed-entry:hover{background:#fafafa}
+.feed-stripe{width:3px;min-height:30px;border-radius:2px;flex-shrink:0;align-self:stretch}
+.feed-stripe.CRITICAL,.feed-stripe.HIGH{background:var(--high)}
+.feed-stripe.MEDIUM{background:#d97706}
+.feed-stripe.LOW{background:var(--online)}
+@keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.feed-entry.new-entry{animation:slideIn .2s ease}
+.feed-time{color:var(--muted2);white-space:nowrap;font-family:monospace;font-size:11px;min-width:64px}
+.feed-sys{color:var(--accent);font-weight:600;white-space:nowrap;min-width:100px;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.feed-proc{font-family:monospace;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.feed-reason{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+/* CHART */
+#risk-chart{width:100%;height:80px}
+.legend-row{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* RESPONSE FORM */
+.c2-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+/* SCENARIO GRID */
+.sim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.sim-btn{padding:14px;border-radius:var(--radius);border:1px solid var(--border);background:#fff;text-align:left;transition:all .2s;cursor:pointer}
+.sim-btn:hover{border-color:var(--accent);background:var(--accent-light);box-shadow:var(--shadow)}
+.sim-title{font-weight:700;font-size:12px;margin-bottom:4px;color:var(--text)}
+.sim-desc{font-size:11px;color:var(--muted);line-height:1.4}
+.sim-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.sim-tag.red{background:var(--high-bg);color:var(--high);border:1px solid var(--high-border)}
+.sim-tag.amber{background:var(--medium-bg);color:var(--medium);border:1px solid var(--medium-border)}
+.sim-tag.green{background:var(--low-bg);color:var(--low);border:1px solid var(--low-border)}
+.sim-tag.blue{background:var(--accent-light);color:var(--accent);border:1px solid #bfdbfe}
+/* GRAPH */
+#graph-container{width:100%;height:480px;background:#fafafa;border-radius:var(--radius);overflow:hidden;position:relative;border:1px solid var(--border)}
+.graph-controls{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px}
+.graph-ctrl-btn{width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border);background:#fff;color:var(--text);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+.graph-ctrl-btn:hover{background:#f0f0f0;border-color:var(--accent)}
+/* SETTINGS */
+.settings-group{margin-bottom:22px}
+.settings-section-title{font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-key{font-size:13px;font-weight:500}
+.settings-val{font-size:12px;color:var(--muted);font-family:monospace}
+.danger-zone{border:1px solid var(--high-border);border-radius:var(--radius);padding:16px;background:var(--high-bg)}
+.danger-title{color:var(--high);font-weight:700;margin-bottom:6px;font-size:13px}
+.danger-desc{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+/* TOAST */
+#toast-container{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none}
+.toast{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;min-width:280px;max-width:360px;box-shadow:var(--shadow-md);animation:toastIn .25s ease;pointer-events:all;display:flex;gap:10px;align-items:flex-start}
+.toast.HIGH,.toast.CRITICAL{border-left:3px solid var(--high)}
+.toast.MEDIUM{border-left:3px solid #d97706}
+.toast.LOW{border-left:3px solid var(--online)}
+.toast.info{border-left:3px solid var(--accent)}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(16px)}}
+.toast-body{flex:1}
+.toast-title{font-weight:700;font-size:12px;margin-bottom:2px}
+.toast-msg{font-size:11px;color:var(--muted);line-height:1.4}
+.toast-close{background:none;border:none;color:var(--muted2);font-size:16px;cursor:pointer;padding:0;line-height:1;flex-shrink:0}
+.toast-close:hover{color:var(--text)}
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:36px 20px;color:var(--muted)}
+.empty-state svg{width:36px;height:36px;stroke:var(--border2);fill:none;stroke-width:1.5;margin:0 auto 10px;display:block}
+.empty-state p{font-size:13px}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border:1px solid var(--border);border-radius:10px;padding:24px;min-width:340px;max-width:480px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:8px}
+.modal-body{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+/* RESPONSIVE */
+@media(max-width:1280px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:960px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(2,1fr)}#sidebar{width:52px}.nav-label,.nav-group-label,.nav-product,.nav-badge,.sidebar-footer{display:none}}
+@media(max-width:640px){.stat-grid{grid-template-columns:1fr 1fr}.c2-form{grid-template-columns:1fr}#main{padding:14px}}
+/* MISC */
+.node-label{font-size:10px;fill:var(--muted);pointer-events:none;font-family:monospace}
+.graph-node{cursor:pointer;transition:opacity .2s}
+.graph-node:hover{opacity:.8}
+.graph-edge{stroke:var(--border2);stroke-opacity:.7}
+.section-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.section-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.section-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.page-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse 2s infinite}
+.timeline-wrap{max-height:400px;overflow-y:auto}
+.tl-entry{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.tl-entry:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px;border:2px solid var(--accent-light)}
+.tl-time{font-size:11px;color:var(--muted2);font-family:monospace}
+.tl-proc{font-size:13px;font-family:monospace;font-weight:600}
+.tl-cmd{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;word-break:break-all}
+
+</style>
+</style></head><body>
+<div id="login-overlay" style="position:fixed;inset:0;background:#f0f2f5;z-index:9999;display:flex;align-items:center;justify-content:center">
+<form id="dashboard-login" style="background:white;padding:32px;border-radius:8px;width:360px">
+<h2>Sign in to BehEDR</h2><p style="margin:12px 0">Sign in to view connected Windows endpoints.</p>
+<label>Username<input id="login-user" autocomplete="username" required style="display:block;width:100%;margin:8px 0;padding:8px"></label>
+<label>Password<input id="login-password" type="password" autocomplete="current-password" required style="display:block;width:100%;margin:8px 0;padding:8px"></label>
+<button class="btn primary" type="submit">Sign in</button><p id="login-error" role="alert" style="color:#b91c1c;margin-top:12px"></p>
+</form></div>
+<div id="dashboard-error" role="alert" style="display:none;position:fixed;bottom:16px;right:16px;z-index:9000;background:#fff5f5;color:#b91c1c;padding:16px"></div>
+<script>
+let dashboardToken = sessionStorage.getItem('behedr-dashboard-token') || '';
+const loginOverlay = document.getElementById('login-overlay');
+if (dashboardToken) loginOverlay.style.display = 'none';
+async function apiFetch(url, options = {}) {
+  const headers = new Headers(options.headers || {});
+  headers.delete('API-Key');
+  if (dashboardToken) headers.set('Authorization', 'Bearer ' + dashboardToken);
+  const response = await fetch(url, {...options, headers});
+  if (response.status === 401) {
+    dashboardToken = '';
+    sessionStorage.removeItem('behedr-dashboard-token');
+    loginOverlay.style.display = 'flex';
+  }
+  return response;
+}
+document.getElementById('dashboard-login').addEventListener('submit', async event => {
+  event.preventDefault();
+  const error = document.getElementById('login-error');
+  error.textContent = '';
+  try {
+    const response = await fetch('/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:document.getElementById('login-user').value,password:document.getElementById('login-password').value})});
+    if (!response.ok) throw new Error('Sign-in failed. Check your username and password.');
+    const data = await response.json();
+    dashboardToken = data.token;
+    sessionStorage.setItem('behedr-dashboard-token', dashboardToken);
+    document.getElementById('login-password').value = '';
+    loginOverlay.style.display = 'none';
+    await fetchStatus();
+  } catch (e) { error.textContent = e.message; }
+});
+</script>
+
+<div id="app">
+
+<header id="header">
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="logo-name">BehEDR</div>
+      <div class="logo-tagline">Security Operations Center</div>
+    </div>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="hdr-status">
+    <span class="status-dot" id="sse-dot"></span>
+    <span id="sse-label">Connecting</span>
+  </div>
+  <div class="hdr-clock"><span id="clock">--:--:--</span></div>
+  <button class="btn primary" onclick="fetchStatus()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+    Refresh
+  </button>
+</header>
+
+<div id="body">
+<nav id="sidebar">
+  <div class="nav-product"><div class="nav-product-name">BehEDR v4.0</div></div>
+  <div class="nav-group-label">Monitor</div>
+  <div class="nav-item active" data-section="overview">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+    <span class="nav-label">Overview</span>
+  </div>
+  <div class="nav-item" data-section="alerts">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+    <span class="nav-label">Alerts</span>
+    <span class="nav-badge" id="nav-alert-badge" style="display:none">0</span>
+  </div>
+  <div class="nav-item" data-section="events">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+    <span class="nav-label">Events</span>
+  </div>
+  <div class="nav-item" data-section="systems">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+    <span class="nav-label">Systems</span>
+  </div>
+  <div class="nav-group-label">Response</div>
+  <div class="nav-item" data-section="c2">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></span>
+    <span class="nav-label">Response</span>
+  </div>
+  <div class="nav-item" data-section="graph">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
+    <span class="nav-label">Process Graph</span>
+  </div>
+  <div class="nav-group-label">Config</div>
+  <div class="nav-item" data-section="mitre">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></svg></span>
+    <span class="nav-label">MITRE ATT&CK</span>
+  </div>
+  <div class="nav-item" data-section="settings">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+    <span class="nav-label">Settings</span>
+  </div>
+  <div class="sidebar-footer">BehEDR v4.0 &mdash; Security Platform</div>
+</nav>
+
+<main id="main">
+
+<!-- OVERVIEW -->
+<section id="sec-overview" class="section active">
+  <div class="section-header">
+    <div><div class="section-title">Overview</div><div class="section-sub">Real-time endpoint security status</div></div>
+    <div class="page-actions"><button class="btn primary" onclick="fetchStatus()">Refresh</button></div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card c-blue"><div class="stat-label">Monitored Systems</div><div class="stat-value v-blue" id="stat-systems">0</div><div class="stat-sub">Active endpoints</div></div>
+    <div class="stat-card c-slate"><div class="stat-label">Total Events</div><div class="stat-value" id="stat-events">0</div><div class="stat-sub">Process executions</div></div>
+    <div class="stat-card c-violet"><div class="stat-label">Total Alerts</div><div class="stat-value" id="stat-alerts">0</div><div class="stat-sub">Detections fired</div></div>
+    <div class="stat-card c-red"><div class="stat-label">Critical / High</div><div class="stat-value v-red" id="stat-high">0</div><div class="stat-sub">Requires attention</div></div>
+    <div class="stat-card c-amber"><div class="stat-label">Medium Alerts</div><div class="stat-value v-amber" id="stat-medium">0</div><div class="stat-sub">Moderate severity</div></div>
+    <div class="stat-card c-green"><div class="stat-label">System Status</div><div class="stat-value v-green" id="stat-status" style="font-size:18px;padding-top:6px">Nominal</div><div class="stat-sub" id="stat-status-sub">No active threats</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Risk Score Trend</span><span class="panel-badge" id="chart-label">Last 20 detections</span></div>
+    <div class="panel-body" style="padding:12px 16px 8px">
+      <svg id="risk-chart"></svg>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--high)"></div>High / Critical</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>Medium</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--online)"></div>Low</div>
+      </div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Connected Systems</span><span class="panel-badge" id="systems-count">0 systems</span></div>
+      <div class="panel-body" id="systems-list">
+        <div class="empty-state"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p>No endpoints connected</p></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Recent Alerts</span><span class="panel-badge" id="recent-alerts-count">0 alerts</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Process</th><th>Severity</th><th>Reason</th><th>Time</th></tr></thead>
+        <tbody id="recent-alerts-body">
+          <tr><td colspan="4"><div class="empty-state"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><p>No alerts detected</p></div></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Live Detection Feed</span>
+      <span class="panel-badge pulse" id="feed-status" style="color:var(--muted)">&#9679; Waiting</span>
+    </div>
+    <div id="live-feed">
+      <div class="empty-state" style="padding:24px"><svg viewBox="0 0 24 24"><path d="M1 6l11 6 11-6M1 12l11 6 11-6"/></svg><p>Listening for live alerts via SSE&hellip;</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ALERTS -->
+<section id="sec-alerts" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Alerts</div><div class="section-sub">All security detections</div></div>
+    <div class="page-actions"><button class="btn primary" onclick="fetchStatus()">Refresh</button></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Alert Log</span><span class="panel-badge" id="alerts-total-badge">0 total</span></div>
+    <div class="panel-body">
+      <div class="filter-bar">
+        <input type="text" id="alert-search" placeholder="Search process, reason, system&hellip;" oninput="filterAlerts()">
+        <select id="alert-risk-filter" onchange="filterAlerts()"><option value="">All Severity Levels</option><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select>
+        <select id="alert-sys-filter" onchange="filterAlerts()"><option value="">All Systems</option></select>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Time</th><th>System</th><th>Process</th><th>Severity</th><th>Score</th><th>Reason</th></tr></thead>
+        <tbody id="alerts-body"><tr><td colspan="6"><div class="empty-state"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><p>No alerts found</p></div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- EVENTS -->
+<section id="sec-events" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Events</div><div class="section-sub">Process execution telemetry</div></div>
+    <div class="page-actions"><button class="btn primary" onclick="fetchStatus()">Refresh</button></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Event Log</span><span class="panel-badge" id="events-total-badge">0 total</span></div>
+    <div class="panel-body">
+      <div class="filter-bar">
+        <input type="text" id="event-search" placeholder="Search process, command line, system&hellip;" oninput="filterEvents()">
+        <select id="event-sys-filter" onchange="filterEvents()"><option value="">All Systems</option></select>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Time</th><th>System</th><th>Parent Process</th><th>Child Process</th><th>PID</th><th>Command Line</th></tr></thead>
+        <tbody id="events-body"><tr><td colspan="6"><div class="empty-state"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No events recorded</p></div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- SYSTEMS -->
+<section id="sec-systems" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Systems</div><div class="section-sub">Managed endpoints</div></div>
+    <div class="page-actions"><button class="btn primary" onclick="fetchStatus()">Refresh</button></div>
+  </div>
+  <div id="systems-grid" class="sys-grid">
+    <div class="empty-state" style="grid-column:1/-1"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p>No systems connected</p></div>
+  </div>
+</section>
+
+<!-- RESPONSE -->
+<section id="sec-c2" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Response</div><div class="section-sub">Command dispatch and attack simulation</div></div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header"><span class="panel-title">Dispatch Command</span></div>
+    <div class="panel-body">
+      <div class="c2-form">
+        <div class="form-group"><label class="form-label">Target System</label><select id="c2-system"><option value="">Select endpoint&hellip;</option></select></div>
+        <div class="form-group"><label class="form-label">Action</label><select id="c2-action"><option value="kill_process">Kill Process</option><option value="collect_info">Collect System Info</option><option value="isolate">Isolate Host</option><option value="scan">Run Scan</option><option value="get_processes">List Processes</option><option value="get_network">Network Connections</option></select></div>
+        <div class="form-group"><label class="form-label">Parameters (JSON)</label><input type="text" id="c2-params" placeholder='{"target":"process.exe"}'></div>
+        <button class="btn primary" onclick="sendC2Command()" style="align-self:flex-end">Send Command</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header"><span class="panel-title">Attack Simulation</span><span class="panel-badge">For testing and validation</span></div>
+    <div class="panel-body">
+      <div class="sim-grid">
+        <button class="sim-btn" onclick="simulate('phishing')"><div class="sim-tag red">CRITICAL</div><div class="sim-title">Phishing &amp; Macro</div><div class="sim-desc">Office macro spawning script engines with encoded PowerShell</div></button>
+        <button class="sim-btn" onclick="simulate('ransomware')"><div class="sim-tag red">CRITICAL</div><div class="sim-title">Ransomware Chain</div><div class="sim-desc">Shadow copy deletion, bcdedit, vssadmin recovery disable</div></button>
+        <button class="sim-btn" onclick="simulate('credential')"><div class="sim-tag red">CRITICAL</div><div class="sim-title">Credential Dump</div><div class="sim-desc">LSASS memory access, Mimikatz credential extraction patterns</div></button>
+        <button class="sim-btn" onclick="simulate('lolbin')"><div class="sim-tag amber">HIGH</div><div class="sim-title">LOLBin Execution</div><div class="sim-desc">mshta, regsvr32, rundll32 proxy execution techniques</div></button>
+        <button class="sim-btn" onclick="simulate('c2')"><div class="sim-tag amber">HIGH</div><div class="sim-title">C2 Beaconing</div><div class="sim-desc">Encoded PowerShell download cradle, C2 beacon pattern</div></button>
+        <button class="sim-btn" onclick="simulate('defender_disable')"><div class="sim-tag amber">HIGH</div><div class="sim-title">Defense Evasion</div><div class="sim-desc">Windows Defender disable via Set-MpPreference, AMSI bypass</div></button>
+        <button class="sim-btn" onclick="simulate('normal')"><div class="sim-tag green">BASELINE</div><div class="sim-title">Normal Activity</div><div class="sim-desc">Generates benign process activity for baseline establishment</div></button>
+        <button class="sim-btn" onclick="simulate('all')"><div class="sim-tag blue">FULL SUITE</div><div class="sim-title">Run All Scenarios</div><div class="sim-desc">Execute all attack scenarios sequentially for full validation</div></button>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Command History</span><span class="panel-badge" id="cmd-count">0 commands</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>System</th><th>Action</th><th>Parameters</th><th>Status</th><th>Result</th><th>Time</th></tr></thead>
+      <tbody id="commands-body"><tr><td colspan="7"><div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg><p>No commands dispatched</p></div></td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- GRAPH -->
+<section id="sec-graph" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Process Graph</div><div class="section-sub">Force-directed process relationship visualization</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Process Relationships</span>
+      <div class="panel-actions">
+        <select id="graph-system-select" onchange="loadGraph()" style="min-width:180px"><option value="">Select endpoint&hellip;</option></select>
+        <button class="btn sm" onclick="resetGraphZoom()">Reset View</button>
+      </div>
+    </div>
+    <div class="panel-body" style="padding:10px 16px 6px">
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--high)"></div>Suspicious</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>Office / Script</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Normal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6d28d9"></div>System</div>
+      </div>
+    </div>
+    <div id="graph-container">
+      <svg id="graph-svg"></svg>
+      <div class="graph-controls">
+        <button class="graph-ctrl-btn" onclick="graphZoomIn()" title="Zoom In">+</button>
+        <button class="graph-ctrl-btn" onclick="graphZoomOut()" title="Zoom Out">&minus;</button>
+        <button class="graph-ctrl-btn" onclick="resetGraphZoom()" title="Reset">&#8635;</button>
+      </div>
+      <div id="graph-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><p>Select an endpoint to view its process graph</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MITRE ATT&CK HEATMAP -->
+<section id="sec-mitre" class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">MITRE ATT&CK Heatmap</div>
+      <div class="section-sub">Technique coverage based on fired alerts — brighter = more detections</div>
+    </div>
+    <div class="page-actions">
+      <select id="mitre-sys-filter" onchange="loadMitreHeatmap()" style="min-width:160px">
+        <option value="">All Systems</option>
+      </select>
+      <button class="btn primary" onclick="loadMitreHeatmap()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Summary stats -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+    <div class="stat-card c-red"><div class="stat-label">Techniques Seen</div><div class="stat-value v-red" id="mitre-tech-count">0</div><div class="stat-sub">Distinct MITRE IDs</div></div>
+    <div class="stat-card c-violet"><div class="stat-label">Tactics Covered</div><div class="stat-value" id="mitre-tactic-count">0</div><div class="stat-sub">ATT&CK tactics</div></div>
+    <div class="stat-card c-amber"><div class="stat-label">Total Hits</div><div class="stat-value v-amber" id="mitre-total-hits">0</div><div class="stat-sub">Alert–technique pairs</div></div>
+    <div class="stat-card c-blue"><div class="stat-label">Top Technique</div><div class="stat-value v-blue" id="mitre-top-tech" style="font-size:16px;padding-top:6px">—</div><div class="stat-sub" id="mitre-top-tech-name">No data</div></div>
+  </div>
+
+  <!-- Heatmap grid -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Technique Frequency Grid</span>
+      <span class="panel-badge" id="mitre-grid-badge">Loading…</span>
+    </div>
+    <div class="panel-body" style="padding:20px">
+      <div id="mitre-legend" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:11px;color:var(--muted)">
+        <span>None</span>
+        <div style="display:flex;gap:2px">
+          <div style="width:16px;height:16px;border-radius:3px;background:#e8f0fb;border:1px solid var(--border)"></div>
+          <div style="width:16px;height:16px;border-radius:3px;background:#b3cef5"></div>
+          <div style="width:16px;height:16px;border-radius:3px;background:#5a9ee8"></div>
+          <div style="width:16px;height:16px;border-radius:3px;background:#1a6ec5"></div>
+          <div style="width:16px;height:16px;border-radius:3px;background:#b91c1c"></div>
+        </div>
+        <span>Critical frequency</span>
+        <span style="margin-left:auto;font-size:10px">Hover a cell for details</span>
+      </div>
+      <div id="mitre-heatmap-grid" style="overflow-x:auto"></div>
+    </div>
+  </div>
+
+  <!-- Top techniques table -->
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Top Techniques</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Technique</th><th>Name</th><th>Tactic</th><th>Hits</th><th>Last Seen</th><th>Score Bar</th></tr></thead>
+      <tbody id="mitre-table-body">
+        <tr><td colspan="6"><div class="empty-state"><p>No MITRE data yet</p></div></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="sec-settings" class="section">
+  <div class="section-header">
+    <div><div class="section-title">Settings</div><div class="section-sub">Configuration and data management</div></div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header"><span class="panel-title">API Configuration</span></div>
+    <div class="panel-body">
+      <div class="settings-group">
+        <div class="settings-section-title">Connection</div>
+        <div class="settings-row"><span class="settings-key">API Endpoint</span><span class="settings-val" id="cfg-endpoint">http://localhost:5000</span></div>
+        <div class="settings-row"><span class="settings-key">Poll Interval</span><span class="settings-val">3 seconds</span></div>
+        <div class="settings-row"><span class="settings-key">SSE Stream</span><span class="settings-val">/stream</span></div>
+        <div class="settings-row"><span class="settings-key">SSE Status</span><span class="settings-val" id="cfg-sse-status">&mdash;</span></div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-section-title">Session</div>
+        <div class="settings-row"><span class="settings-key">Version</span><span class="settings-val">BehEDR v4.0</span></div>
+        <div class="settings-row"><span class="settings-key">Last Refresh</span><span class="settings-val" id="cfg-last-update">&mdash;</span></div>
+        <div class="settings-row"><span class="settings-key">Data Points Loaded</span><span class="settings-val" id="cfg-data-points">&mdash;</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header"><span class="panel-title">Export Data</span></div>
+    <div class="panel-body" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" onclick="exportData('json')">Export JSON</button>
+      <button class="btn success" onclick="exportData('csv')">Export CSV</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title" style="color:var(--high)">Danger Zone</span></div>
+    <div class="panel-body">
+      <div class="danger-zone">
+        <div class="danger-title">Clear All Data</div>
+        <div class="danger-desc">Permanently deletes all alerts, events, and system records from the database. This action cannot be undone.</div>
+        <button class="btn danger" onclick="clearData()">Clear All Data</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main></div></div>
+<div id="toast-container"></div>
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Confirm Action</div>
+    <div class="modal-body" id="modal-body">Are you sure?</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn danger" id="modal-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="timeline-modal" style="display:none">
+  <div class="modal" style="max-width:600px;width:95%">
+    <div class="modal-title" id="timeline-modal-title">Process Timeline</div>
+    <div class="timeline-wrap" id="timeline-body" style="max-height:400px;overflow-y:auto;margin-bottom:16px"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeTimelineModal()">Close</button></div>
+  </div>
+</div>
+
+<script>
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const state = {
+
+  systems: [],
+
+  alerts: [],
+
+  events: [],
+
+  commands: [],
+
+  stats: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+
+  total_alerts: 0,
+
+  total_events: 0,
+
+  startTime: Date.now(),
+
+  lastUpdate: null,
+
+  sseConnected: false,
+
+  riskHistory: [],   // [{ts, level}]
+
+  graphZoom: null,
+
+  graphSim: null,
+
+  currentSection: 'overview'
+
+};
+
+
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.nav-item').forEach(item => {
+
+  item.addEventListener('click', () => {
+
+    const sec = item.dataset.section;
+
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+    item.classList.add('active');
+
+    document.getElementById('sec-' + sec).classList.add('active');
+
+    state.currentSection = sec;
+
+    if (sec === 'graph') {
+
+      const sel = document.getElementById('graph-system-select');
+
+      if (sel.value) loadGraph();
+
+    }
+
+    if (sec === 'mitre') {
+
+      loadMitreHeatmap();
+
+    }
+
+  });
+
+});
+
+
+
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
+
+function updateClock() {
+
+  const now = new Date();
+
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+
+  const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+
+  const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+
+  const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+
+  const s = (elapsed % 60).toString().padStart(2, '0');
+
+  const uptime = document.getElementById('uptime-val');
+  if (uptime) uptime.textContent = `${h}:${m}:${s}`;
+
+}
+
+setInterval(updateClock, 1000);
+
+updateClock();
+
+
+
+// ─── RELATIVE TIME ───────────────────────────────────────────────────────────
+
+function relTime(ts) {
+
+  if (!ts) return '—';
+
+  const d = new Date(ts);
+
+  if (isNaN(d)) return ts;
+
+  const diff = Math.floor((Date.now() - d) / 1000);
+
+  if (diff < 5) return 'just now';
+
+  if (diff < 60) return `${diff}s ago`;
+
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+
+  return `${Math.floor(diff / 86400)}d ago`;
+
+}
+
+
+
+function fmtFull(ts) {
+
+  if (!ts) return '';
+
+  const d = new Date(ts);
+
+  if (isNaN(d)) return ts;
+
+  return d.toLocaleString();
+
+}
+
+
+
+// ─── SCORE BAR ───────────────────────────────────────────────────────────────
+
+function scoreBar(score) {
+
+  const n = parseFloat(score) || 0;
+
+  const cls = n > 70 ? 'high' : n > 30 ? 'med' : 'low';
+
+  return `<div class="score-bar-wrap">
+
+    <div class="score-bar"><div class="score-bar-fill ${cls}" style="width:${n}%"></div></div>
+
+    <span class="score-num" style="color:var(--${cls === 'high' ? 'high' : cls === 'med' ? 'medium' : 'online'})">${Math.round(n)}</span>
+
+  </div>`;
+
+}
+
+
+
+// ─── BADGE ───────────────────────────────────────────────────────────────────
+
+function badge(level) {
+
+  return `<span class="badge ${level}">${level}</span>`;
+
+}
+
+
+
+// ─── FETCH STATUS ─────────────────────────────────────────────────────────────
+
+async function fetchStatus() {
+  if (!dashboardToken) return;
+
+  try {
+
+    const res = await apiFetch('/api/status', {});
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const data = await res.json();
+
+    state.systems = data.systems || [];
+
+    state.alerts = data.alerts || [];
+
+    state.events = data.events || [];
+
+    state.commands = data.commands || [];
+
+    state.stats = data.stats || { HIGH: 0, MEDIUM: 0, LOW: 0 };
+
+    state.total_alerts = data.total_alerts || 0;
+
+    state.total_events = data.total_events || 0;
+
+    state.lastUpdate = new Date();
+
+    renderAll();
+    document.getElementById("dashboard-error").style.display = "none";
+
+  } catch (e) {
+
+    console.error('fetchStatus error:', e);
+    const banner = document.getElementById('dashboard-error');
+    banner.textContent = 'Dashboard data unavailable: ' + e.message + '. Retrying...';
+    banner.style.display = 'block';
+
+  }
+
+}
+
+
+
+// ─── RENDER ALL ──────────────────────────────────────────────────────────────
+
+function renderAll() {
+
+  renderStats();
+
+  renderSystemsList();
+
+  renderRecentAlerts();
+
+  renderAlertsTable();
+
+  renderEventsTable();
+
+  renderSystemsGrid();
+
+  renderCommandsTable();
+
+  renderRiskChart();
+
+  updateSystemDropdowns();
+
+  updateSettingsInfo();
+
+}
+
+
+
+// ─── STAT CARDS ──────────────────────────────────────────────────────────────
+
+function animateNum(el, newVal) {
+
+  const cur = parseInt(el.textContent) || 0;
+
+  if (cur === newVal) return;
+
+  el.textContent = newVal;
+
+  el.style.transform = 'scale(1.1)';
+
+  setTimeout(() => { el.style.transform = 'scale(1)'; }, 200);
+
+}
+
+
+
+function renderStats() {
+
+  animateNum(document.getElementById('stat-systems'), state.systems.length);
+
+  animateNum(document.getElementById('stat-events'), state.total_events);
+
+  animateNum(document.getElementById('stat-alerts'), state.total_alerts);
+
+  animateNum(document.getElementById('stat-high'), state.stats.HIGH || 0);
+
+  animateNum(document.getElementById('stat-medium'), state.stats.MEDIUM || 0);
+
+
+
+  const highCount = state.stats.HIGH || 0;
+
+  const statusEl = document.getElementById('stat-status');
+
+  const statusSub = document.getElementById('stat-status-sub');
+
+  if (highCount > 0) {
+
+    statusEl.textContent = ' At Risk';
+
+    statusEl.className = 'stat-value red';
+
+    statusSub.textContent = `${highCount} critical threat${highCount > 1 ? 's' : ''}`;
+
+  } else if ((state.stats.MEDIUM || 0) > 0) {
+
+    statusEl.textContent = ' Warning';
+
+    statusEl.className = 'stat-value yellow';
+
+    statusSub.textContent = `${state.stats.MEDIUM} medium alert${state.stats.MEDIUM > 1 ? 's' : ''}`;
+
+  } else {
+
+    statusEl.textContent = ' Safe';
+
+    statusEl.className = 'stat-value green';
+
+    statusSub.textContent = 'No active threats';
+
+  }
+
+
+
+  const badge = document.getElementById('nav-alert-badge');
+
+  if (state.total_alerts > 0) {
+
+    badge.textContent = state.total_alerts > 99 ? '99+' : state.total_alerts;
+
+    badge.style.display = '';
+
+  } else {
+
+    badge.style.display = 'none';
+
+  }
+
+
+
+  document.getElementById('alerts-total-badge').textContent = state.total_alerts + ' total';
+
+  document.getElementById('events-total-badge').textContent = state.total_events + ' total';
+
+}
+
+
+
+// ─── RISK CHART ──────────────────────────────────────────────────────────────
+
+function renderRiskChart() {
+
+  const alerts = state.alerts.slice(-20);
+
+  const svg = document.getElementById('risk-chart');
+
+  const W = svg.clientWidth || 600;
+
+  const H = 80;
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  svg.innerHTML = '';
+
+
+
+  if (!alerts.length) {
+
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    t.setAttribute('x', W / 2); t.setAttribute('y', H / 2);
+
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('fill', '#8b949e');
+
+    t.setAttribute('font-size', '12'); t.textContent = 'No alert data yet';
+
+    svg.appendChild(t); return;
+
+  }
+
+
+
+  const barW = Math.max(4, Math.floor((W - 20) / alerts.length) - 2);
+
+  const gap = Math.floor((W - 20) / alerts.length);
+
+  const colorMap = { CRITICAL: '#7c0000', HIGH: '#b91c1c', MEDIUM: '#d97706', LOW: '#059669' };
+
+
+
+  alerts.forEach((a, i) => {
+
+    const color = colorMap[a.risk_level] || '#58a6ff';
+
+    const barH = a.risk_level === 'CRITICAL' ? 80 : a.risk_level === 'HIGH' ? 60 : a.risk_level === 'MEDIUM' ? 40 : 20;
+
+    const x = 10 + i * gap;
+
+    const y = H - barH - 4;
+
+
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+
+    rect.setAttribute('width', barW); rect.setAttribute('height', barH);
+
+    rect.setAttribute('fill', color); rect.setAttribute('rx', '2');
+
+    rect.setAttribute('opacity', '0.8');
+
+    rect.setAttribute('class', 'chart-bar');
+
+
+
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+
+    title.textContent = `${a.risk_level}${a.confidence ? ' ['+a.confidence+']' : ''} — ${a.process || '?'} — ${fmtFull(a.timestamp)}`;
+
+    rect.appendChild(title);
+
+    svg.appendChild(rect);
+
+  });
+
+
+
+  document.getElementById('chart-label').textContent = `Last ${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`;
+
+}
+
+
+
+// ─── SYSTEMS LIST (OVERVIEW) ──────────────────────────────────────────────────
+
+function renderSystemsList() {
+
+  const el = document.getElementById('systems-list');
+
+  document.getElementById('systems-count').textContent = state.systems.length + ' systems';
+
+
+
+  if (!state.systems.length) {
+
+    el.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;display:block;margin:0 auto 10px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p>No systems connected</p></div>';
+
+    return;
+
+  }
+
+
+
+  el.innerHTML = state.systems.map(sys => {
+
+    const online = sys.status === 'online';
+
+    const alertCount = (state.alerts.filter(a => a.system_id === sys.id || a.system_id === sys.hostname)).length;
+
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(48,54,61,.4)">
+
+      <div style="width:8px;height:8px;border-radius:50%;background:${online ? 'var(--green)' : 'var(--muted)'};flex-shrink:0;${online ? 'box-shadow:0 0 6px var(--green)' : ''}"></div>
+
+      <div style="flex:1;min-width:0">
+
+        <div style="font-weight:600;font-size:13px">${esc(sys.hostname || sys.id)}</div>
+
+        <div style="font-size:11px;color:#666">${esc(sys.ip || '—')} · ${relTime(sys.last_seen)}</div>
+
+      </div>
+
+      ${alertCount > 0 ? `<span class="badge HIGH">${alertCount}</span>` : ''}
+
+      <button class="btn sm" onclick="openGraph('${esc(sys.id)}')">Graph</button>
+
+      <button class="btn sm" onclick="openTimeline('${esc(sys.id)}')">Timeline</button>
+
+    </div>`;
+
+  }).join('');
+
+}
+
+
+
+// ─── RECENT ALERTS TABLE ──────────────────────────────────────────────────────
+
+function renderRecentAlerts() {
+
+  const tbody = document.getElementById('recent-alerts-body');
+
+  const recent = state.alerts.slice(-10).reverse();
+
+  document.getElementById('recent-alerts-count').textContent = state.alerts.length + ' alerts';
+
+
+
+  if (!recent.length) {
+
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>No alerts</p></div></td></tr>';
+
+    return;
+
+  }
+
+
+
+  tbody.innerHTML = recent.map(a => `<tr>
+
+    <td class="td-mono td-truncate" title="${esc(a.process || '')}">${esc(a.process || '—')}</td>
+
+    <td>${badge(a.risk_level || 'LOW')}</td>
+
+    <td class="td-truncate" style="max-width:160px;color:#666" title="${esc(a.reason || '')}">${esc(a.reason || '—')}</td>
+
+    <td title="${fmtFull(a.timestamp)}" style="color:#666;white-space:nowrap">${relTime(a.timestamp)}</td>
+
+  </tr>`).join('');
+
+}
+
+
+
+// ─── ALERTS TABLE ─────────────────────────────────────────────────────────────
+
+function renderAlertsTable() {
+
+  const search = (document.getElementById('alert-search').value || '').toLowerCase();
+
+  const riskF = document.getElementById('alert-risk-filter').value;
+
+  const sysF = document.getElementById('alert-sys-filter').value;
+
+
+
+  let rows = state.alerts.slice().reverse();
+
+  if (search) rows = rows.filter(a =>
+
+    (a.process || '').toLowerCase().includes(search) ||
+
+    (a.reason || '').toLowerCase().includes(search) ||
+
+    (a.system_id || '').toLowerCase().includes(search)
+
+  );
+
+  if (riskF) rows = rows.filter(a => a.risk_level === riskF);
+
+  if (sysF) rows = rows.filter(a => a.system_id === sysF);
+
+
+
+  const tbody = document.getElementById('alerts-body');
+
+  if (!rows.length) {
+
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No alerts match filters</p></div></td></tr>';
+
+    return;
+
+  }
+
+
+
+  tbody.innerHTML = rows.map(a => `<tr>
+
+    <td title="${fmtFull(a.timestamp)}" style="white-space:nowrap;color:#666">${relTime(a.timestamp)}</td>
+
+    <td style="color:#003399">${esc(a.system_id || '—')}</td>
+
+    <td class="td-mono td-truncate" title="${esc(a.process || '')}">${esc(a.process || '—')}</td>
+
+    <td>${badge(a.risk_level || 'LOW')}</td>
+
+    <td style="min-width:120px">${scoreBar(a.risk_score)}</td>
+
+    <td class="td-truncate" style="max-width:220px;color:#666" title="${esc(a.reason || '')}">${esc(a.reason || '—')}</td>
+
+  </tr>`).join('');
+
+}
+
+
+
+function filterAlerts() { renderAlertsTable(); }
+
+
+
+// ─── EVENTS TABLE ─────────────────────────────────────────────────────────────
+
+function renderEventsTable() {
+
+  const search = (document.getElementById('event-search').value || '').toLowerCase();
+
+  const sysF = document.getElementById('event-sys-filter').value;
+
+
+
+  let rows = state.events.slice().reverse();
+
+  if (search) rows = rows.filter(e =>
+
+    (e.parent || '').toLowerCase().includes(search) ||
+
+    (e.child || '').toLowerCase().includes(search) ||
+
+    (e.cmdline || '').toLowerCase().includes(search) ||
+
+    (e.system_id || '').toLowerCase().includes(search)
+
+  );
+
+  if (sysF) rows = rows.filter(e => e.system_id === sysF);
+
+
+
+  const tbody = document.getElementById('events-body');
+
+  if (!rows.length) {
+
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No events match filters</p></div></td></tr>';
+
+    return;
+
+  }
+
+
+
+  tbody.innerHTML = rows.map(e => `<tr>
+
+    <td title="${fmtFull(e.timestamp)}" style="white-space:nowrap;color:#666">${relTime(e.timestamp)}</td>
+
+    <td style="color:#003399">${esc(e.system_id || '—')}</td>
+
+    <td class="td-mono td-truncate" title="${esc(e.parent || '')}">${esc(e.parent || '—')}</td>
+
+    <td class="td-mono td-truncate" title="${esc(e.child || '')}">${esc(e.child || '—')}</td>
+
+    <td class="td-mono" style="color:#666">${esc(e.pid || '—')}</td>
+
+    <td class="td-mono td-truncate" style="max-width:240px;color:#666" title="${esc(e.cmdline || '')}">${esc(e.cmdline || '—')}</td>
+
+  </tr>`).join('');
+
+}
+
+
+
+function filterEvents() { renderEventsTable(); }
+
+
+
+// ─── SYSTEMS GRID ─────────────────────────────────────────────────────────────
+
+function renderSystemsGrid() {
+
+  const grid = document.getElementById('systems-grid');
+
+  if (!state.systems.length) {
+
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;display:block;margin:0 auto 10px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p>No systems connected</p></div>';
+
+    return;
+
+  }
+
+
+
+  grid.innerHTML = state.systems.map(sys => {
+
+    const online = sys.status === 'online';
+
+    const alertCount = state.alerts.filter(a => a.system_id === sys.id || a.system_id === sys.hostname).length;
+
+    const highCount = state.alerts.filter(a => (a.system_id === sys.id || a.system_id === sys.hostname) && (a.risk_level === 'HIGH' || a.risk_level === 'CRITICAL')).length;
+
+    return `<div class="sys-card">
+
+      <div class="sys-card-hdr">
+
+        <div class="sys-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+
+        <div style="flex:1;min-width:0">
+
+          <div class="sys-card-name">${esc(sys.hostname || sys.id)}</div>
+
+          <div class="sys-card-sub">${esc(sys.platform || 'Unknown OS')}</div>
+
+        </div>
+
+        <span class="badge ${online ? 'online' : 'offline'}">${online ? '● Online' : '○ Offline'}</span>
+
+      </div>
+
+      <div class="sys-meta-grid">
+
+        <div class=""><div class="sys-meta-lbl"><div class="sys-meta-lbl">IP Address</div>${esc(sys.ip || '—')}</div>
+
+        <div class=""><div class="sys-meta-lbl"><div class="sys-meta-lbl">Agent Ver</div>${esc(sys.agent_version || '—')}</div>
+
+        <div class=""><div class="sys-meta-lbl"><div class="sys-meta-lbl">First Seen</div><span title="${fmtFull(sys.first_seen)}">${relTime(sys.first_seen)}</span></div>
+
+        <div class=""><div class="sys-meta-lbl"><div class="sys-meta-lbl">Last Seen</div><span title="${fmtFull(sys.last_seen)}">${relTime(sys.last_seen)}</span></div>
+
+      </div>
+
+      ${alertCount > 0 ? `<div style="margin-bottom:10px;display:flex;gap:6px;align-items:center">
+
+        <span style="font-size:12px;color:#666">Alerts:</span>
+
+        ${highCount > 0 ? `<span class="badge HIGH">${highCount} HIGH</span>` : ''}
+
+        <span class="badge MEDIUM">${alertCount - highCount} other</span>
+
+      </div>` : '<div style="margin-bottom:10px;font-size:12px;color:#006622"> No alerts</div>'}
+
+      <div class="sys-actions">
+
+        <button class="btn sm primary" onclick="openGraph('${esc(sys.id)}')">View Graph</button>
+
+        <button class="btn sm" onclick="openTimeline('${esc(sys.id)}')">Timeline</button>
+
+        <button class="btn sm warning" onclick="sendC2Quick('${esc(sys.id)}','kill_process')">Kill Process</button>
+
+        <button class="btn sm" onclick="sendC2Quick('${esc(sys.id)}','collect_info')">Collect Info</button>
+
+      </div>
+
+    </div>`;
+
+  }).join('');
+
+}
+
+
+
+// ─── COMMANDS TABLE ───────────────────────────────────────────────────────────
+
+function renderCommandsTable() {
+
+  const tbody = document.getElementById('commands-body');
+
+  document.getElementById('cmd-count').textContent = state.commands.length + ' commands';
+
+
+
+  if (!state.commands.length) {
+
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No commands sent</p></div></td></tr>';
+
+    return;
+
+  }
+
+
+
+  const rows = state.commands.slice().reverse();
+
+  tbody.innerHTML = rows.map(c => `<tr>
+
+    <td class="td-mono" style="color:#666;font-size:11px">${esc(String(c.id || '—').slice(0, 8))}</td>
+
+    <td style="color:#003399">${esc(c.system_id || '—')}</td>
+
+    <td class="td-mono">${esc(c.action || '—')}</td>
+
+    <td class="td-mono td-truncate" style="max-width:120px;color:#666" title="${esc(JSON.stringify(c.params || ''))}">${esc(JSON.stringify(c.params || '') || '—')}</td>
+
+    <td><span class="badge ${c.status || 'pending'}">${esc(c.status || 'pending')}</span></td>
+
+    <td class="td-truncate" style="max-width:160px;color:#666" title="${esc(c.result || '')}">${esc(c.result || '—')}</td>
+
+    <td title="${fmtFull(c.timestamp)}" style="color:#666;white-space:nowrap">${relTime(c.timestamp)}</td>
+
+  </tr>`).join('');
+
+}
+
+
+
+// ─── SYSTEM DROPDOWNS ─────────────────────────────────────────────────────────
+
+function updateSystemDropdowns() {
+
+  const ids = state.systems.map(s => s.id || s.hostname).filter(Boolean);
+
+  const selectors = ['c2-system', 'graph-system-select', 'alert-sys-filter', 'event-sys-filter'];
+
+
+
+  selectors.forEach(id => {
+
+    const sel = document.getElementById(id);
+
+    if (!sel) return;
+
+    const cur = sel.value;
+
+    const isFilter = id.includes('filter');
+
+    sel.innerHTML = (isFilter ? '<option value="">All Systems</option>' : '<option value="">Select system...</option>') +
+
+      ids.map(sid => `<option value="${esc(sid)}"${cur === sid ? ' selected' : ''}>${esc(sid)}</option>`).join('');
+
+  });
+
+}
+
+
+
+// ─── SETTINGS INFO ────────────────────────────────────────────────────────────
+
+function updateSettingsInfo() {
+
+  document.getElementById('cfg-endpoint').textContent = window.location.origin;
+
+  document.getElementById('cfg-sse-status').textContent = state.sseConnected ? 'Connected' : 'Disconnected';
+
+  document.getElementById('cfg-last-update').textContent = state.lastUpdate ? state.lastUpdate.toLocaleTimeString() : '—';
+
+  document.getElementById('cfg-data-points').textContent = `${state.alerts.length} alerts, ${state.events.length} events`;
+
+}
+
+
+
+// ─── ESCAPE HTML ─────────────────────────────────────────────────────────────
+
+function esc(str) {
+
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+}
+
+
+
+// ─── SSE ─────────────────────────────────────────────────────────────────────
+
+let sseSource = null;
+
+let sseReconnectTimer = null;
+
+
+
+function connectSSE() {
+
+  if (sseSource) { sseSource.close(); sseSource = null; }
+
+  clearTimeout(sseReconnectTimer);
+
+
+
+  sseSource = new EventSource('/stream?apikey=' + encodeURIComponent(EDR_API_KEY));
+
+
+
+  sseSource.onopen = () => {
+
+    state.sseConnected = true;
+
+    document.getElementById('sse-dot').className = 'status-dot connected';
+
+    document.getElementById('sse-label').textContent = 'Live';
+
+    document.getElementById('cfg-sse-status').textContent = 'Connected';
+
+    document.getElementById('feed-status').textContent = '● Live';
+
+    document.getElementById('feed-status').style.color = 'var(--online)';
+
+  };
+
+
+
+  sseSource.onmessage = (e) => {
+
+    try {
+
+      const alert = JSON.parse(e.data);
+
+      addFeedEntry(alert);
+
+      if (alert.risk_level === 'CRITICAL' || alert.risk_level === 'HIGH') {
+
+        showToast('HIGH', 'High Risk Alert', `${alert.process || 'Unknown'} on ${alert.system_id || '?'} — ${alert.reason || ''}`, 'HIGH');
+
+      }
+
+      // Refresh data on new alert
+
+      fetchStatus();
+
+    } catch (err) { /* ignore parse errors */ }
+
+  };
+
+
+
+  sseSource.onerror = () => {
+
+    state.sseConnected = false;
+
+    document.getElementById('sse-dot').className = 'status-dot disconnected';
+
+    document.getElementById('sse-label').textContent = 'Disconnected';
+
+    document.getElementById('cfg-sse-status').textContent = 'Disconnected';
+
+    document.getElementById('feed-status').textContent = '● Reconnecting...';
+
+    document.getElementById('feed-status').style.color = '#d97706';
+
+    sseSource.close();
+
+    sseSource = null;
+
+    sseReconnectTimer = setTimeout(connectSSE, 3000);
+
+  };
+
+}
+
+
+
+// ─── LIVE FEED ────────────────────────────────────────────────────────────────
+
+const MAX_FEED = 50;
+
+
+
+function addFeedEntry(alert) {
+
+  const feed = document.getElementById('live-feed');
+
+  // Remove empty state
+
+  const empty = feed.querySelector('.empty-state');
+
+  if (empty) empty.parentElement.remove ? feed.innerHTML = '' : (empty.remove && empty.remove());
+
+
+
+  const entry = document.createElement('div');
+
+  entry.className = `feed-entry ${alert.risk_level || 'LOW'}`;
+
+  entry.innerHTML = `
+
+    <span class="feed-time" title="${fmtFull(alert.timestamp)}">${relTime(alert.timestamp)}</span>
+
+    <span class="feed-sys">${esc(alert.system_id || '?')}</span>
+
+    <span class="feed-proc">${esc(alert.process || '?')}</span>
+
+    <span class="feed-reason">${esc(alert.reason || '')}</span>
+
+    ${badge(alert.risk_level || 'LOW')}
+
+  `;
+
+
+
+  feed.insertBefore(entry, feed.firstChild);
+
+
+
+  // Trim old entries
+
+  while (feed.children.length > MAX_FEED) {
+
+    feed.removeChild(feed.lastChild);
+
+  }
+
+}
+
+
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+
+function showToast(type, title, msg, level) {
+
+  const container = document.getElementById('toast-container');
+
+  const icons = { HIGH: '', MEDIUM: '', LOW: '', info: '' };
+
+  const toast = document.createElement('div');
+
+  toast.className = `toast ${level || type}`;
+
+  toast.innerHTML = `
+
+    <span class="toast-icon">${icons[level || type] || ''}</span>
+
+    <div class="toast-body">
+
+      <div class="toast-title">${esc(title)}</div>
+
+      <div class="toast-msg">${esc(msg)}</div>
+
+    </div>
+
+    <button class="toast-close" onclick="this.closest('.toast').remove()">×</button>
+
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+
+    toast.style.animation = 'toastOut .3s ease forwards';
+
+    setTimeout(() => toast.remove(), 300);
+
+  }, 4000);
+
+}
+
+
+
+// ─── API KEY (read from meta tag injected by server, or prompt) ───────────────
+
+const EDR_API_KEY = ''; // Agent credentials are never exposed to the dashboard.
+
+
+
+function apiHeaders(extra) {
+
+  return Object.assign({ 'Content-Type': 'application/json', 'API-Key': EDR_API_KEY }, extra || {});
+
+}
+
+
+
+// ─── C2 COMMANDS ─────────────────────────────────────────────────────────────
+
+async function sendC2Command() {
+
+  const system_id = document.getElementById('c2-system').value;
+
+  const action = document.getElementById('c2-action').value;
+
+  const paramsRaw = document.getElementById('c2-params').value.trim();
+
+
+
+  if (!system_id) { showToast('info', 'a system', 'Please select a target system first.', 'info'); return; }
+
+
+
+  let params = {};
+
+  if (paramsRaw) {
+
+    try { params = JSON.parse(paramsRaw); }
+
+    catch (e) { showToast('info', 'JSON', 'Params must be valid JSON or empty.', 'info'); return; }
+
+  }
+
+
+
+  try {
+
+    const res = await apiFetch('/c2/push', {
+
+      method: 'POST',
+
+      headers: apiHeaders(),
+
+      body: JSON.stringify({ system_id, action, params })
+
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+
+      showToast('info', 'Queued', `${action} → ${system_id} (id:${data.id})`, 'info');
+
+    } else {
+
+      showToast('HIGH', 'Command Failed', data.error || 'Unknown error', 'HIGH');
+
+    }
+
+    fetchStatus();
+
+  } catch (e) {
+
+    showToast('HIGH', 'Command Failed', e.message, 'HIGH');
+
+  }
+
+}
+
+
+
+async function sendC2Quick(system_id, action) {
+
+  try {
+
+    const res = await apiFetch('/c2/push', {
+
+      method: 'POST',
+
+      headers: apiHeaders(),
+
+      body: JSON.stringify({ system_id, action, params: {} })
+
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+
+      showToast('info', 'Queued', `${action} → ${system_id}`, 'info');
+
+    } else {
+
+      showToast('HIGH', 'Command Failed', data.error || 'Unauthorized', 'HIGH');
+
+    }
+
+    fetchStatus();
+
+  } catch (e) {
+
+    showToast('HIGH', 'Command Failed', e.message, 'HIGH');
+
+  }
+
+}
+
+
+
+// ─── SIMULATE ─────────────────────────────────────────────────────────────────
+
+async function simulate(scenario) {
+
+  try {
+
+    const res = await apiFetch('/simulate', {
+
+      method: 'POST',
+
+      headers: apiHeaders(),
+
+      body: JSON.stringify({ scenario, system_id: 'DEMO-PC' })
+
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) { showToast('HIGH', 'Simulation Failed', data.error || 'Unauthorized', 'HIGH'); return; }
+
+    const labels = {
+
+      phishing:    'Phishing Macro',
+
+      ransomware:  'Ransomware Chain',
+
+      c2:          'C2 Beacon',
+
+      lolbin:      'LOLBin Execution',
+
+      credential:  'Credential Dumping',
+
+      normal:      ' Normal Baseline',
+
+      all:         ' All Scenarios',
+
+    };
+
+    showToast('info', 'Started', `${labels[scenario] || scenario} running on DEMO-PC`, 'info');
+
+    setTimeout(fetchStatus, 2000);
+
+    setTimeout(fetchStatus, 5000);
+
+  } catch (e) {
+
+    showToast('HIGH', 'Simulation Failed', e.message, 'HIGH');
+
+  }
+
+}
+
+
+
+// ─── CLEAR DATA ───────────────────────────────────────────────────────────────
+
+function clearData() {
+
+  openModal(
+
+    '[WARNING] Clear All Data',
+
+    'This will permanently delete ALL alerts, events, and system records. This action cannot be undone.',
+
+    async () => {
+
+      try {
+
+        const res = await apiFetch('/api/clear', {
+
+          method: 'POST',
+
+          headers: apiHeaders(),
+
+          body: JSON.stringify({ confirm: 'yes' })
+
+        });
+
+        if (res.ok) {
+
+          showToast('info', 'Cleared', 'All records have been deleted.', 'info');
+
+          state.alerts = []; state.events = []; state.systems = [];
+
+          state.commands = []; state.total_alerts = 0; state.total_events = 0;
+
+          state.stats = { HIGH: 0, MEDIUM: 0, LOW: 0 };
+
+          document.getElementById('live-feed').innerHTML = '<div class="empty-state"><div class="empty-icon"></div><p>Listening for live alerts via SSE...</p></div>';
+
+          renderAll();
+    document.getElementById("dashboard-error").style.display = "none";
+
+        } else {
+
+          showToast('HIGH', 'Clear Failed', 'Unauthorized or server error.', 'HIGH');
+
+        }
+
+      } catch (e) {
+
+        showToast('HIGH', 'Clear Failed', e.message, 'HIGH');
+
+      }
+
+    }
+
+  );
+
+}
+
+
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+
+let modalCallback = null;
+
+
+
+function openModal(title, body, onConfirm) {
+
+  document.getElementById('modal-title').textContent = title;
+
+  document.getElementById('modal-body').textContent = body;
+
+  modalCallback = onConfirm;
+
+  document.getElementById('confirm-modal').classList.add('open');
+
+}
+
+
+
+function closeModal() {
+
+  document.getElementById('confirm-modal').classList.remove('open');
+
+  modalCallback = null;
+
+}
+
+
+
+document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+
+  closeModal();
+
+  if (modalCallback) modalCallback();
+
+});
+
+
+
+document.getElementById('confirm-modal').addEventListener('click', (e) => {
+
+  if (e.target === e.currentTarget) closeModal();
+
+});
+
+
+
+// ─── GRAPH ────────────────────────────────────────────────────────────────────
+
+let graphZoomBehavior = null;
+
+let graphSvgRoot = null;
+
+
+
+function openGraph(systemId) {
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+  document.querySelector('[data-section="graph"]').classList.add('active');
+
+  document.getElementById('sec-graph').classList.add('active');
+
+  state.currentSection = 'graph';
+
+
+
+  const sel = document.getElementById('graph-system-select');
+
+  sel.value = systemId;
+
+  loadGraph();
+
+}
+
+
+
+async function loadGraph() {
+
+  const systemId = document.getElementById('graph-system-select').value;
+
+  const emptyEl = document.getElementById('graph-empty');
+
+  const svgEl = document.getElementById('graph-svg');
+
+
+
+  if (!systemId) {
+
+    emptyEl.style.display = 'flex';
+
+    svgEl.innerHTML = '';
+
+    return;
+
+  }
+
+
+
+  emptyEl.style.display = 'none';
+
+  svgEl.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#8b949e" font-size="13" dominant-baseline="middle">Loading graph...</text>';
+
+
+
+  try {
+
+    const res = await apiFetch(`/api/graph/${encodeURIComponent(systemId)}`);
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const data = await res.json();
+
+    renderGraph(data.nodes || [], data.edges || []);
+
+  } catch (e) {
+
+    svgEl.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#f85149" font-size="13" dominant-baseline="middle">Failed to load graph: ${esc(e.message)}</text>`;
+
+  }
+
+}
+
+
+
+function getNodeColor(id) {
+
+  const name = (id || '').toLowerCase();
+
+  const suspicious = ['powershell', 'cmd', 'wscript', 'cscript', 'mshta', 'regsvr32', 'rundll32', 'certutil', 'bitsadmin', 'vssadmin', 'wmic', 'net.exe', 'mimikatz', 'psexec'];
+
+  const office = ['winword', 'excel', 'outlook', 'powerpoint', 'onenote', 'python', 'node', 'wscript'];
+
+  const system = ['svchost', 'lsass', 'csrss', 'winlogon', 'services', 'smss', 'system'];
+
+
+
+  if (suspicious.some(s => name.includes(s))) return '#f85149';
+
+  if (office.some(s => name.includes(s))) return '#e3b341';
+
+  if (system.some(s => name.includes(s))) return '#bc8cff';
+
+  return '#58a6ff';
+
+}
+
+
+
+function renderGraph(nodes, edges) {
+
+  const container = document.getElementById('graph-container');
+
+  const W = container.clientWidth || 800;
+
+  const H = container.clientHeight || 500;
+
+  const svgEl = document.getElementById('graph-svg');
+
+  svgEl.innerHTML = '';
+
+
+
+  if (!nodes.length) {
+
+    svgEl.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#8b949e" font-size="13" dominant-baseline="middle">No process data for this system</text>';
+
+    return;
+
+  }
+
+
+
+  const svg = d3.select('#graph-svg')
+
+    .attr('width', W).attr('height', H);
+
+
+
+  const g = svg.append('g');
+
+
+
+  graphZoomBehavior = d3.zoom()
+
+    .scaleExtent([0.1, 4])
+
+    .on('zoom', (event) => { g.attr('transform', event.transform); });
+
+
+
+  svg.call(graphZoomBehavior);
+
+  graphSvgRoot = svg;
+
+
+
+  // Arrow marker
+
+  svg.append('defs').append('marker')
+
+    .attr('id', 'arrow')
+
+    .attr('viewBox', '0 -5 10 10')
+
+    .attr('refX', 20).attr('refY', 0)
+
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+
+    .attr('orient', 'auto')
+
+    .append('path')
+
+    .attr('d', 'M0,-5L10,0L0,5')
+
+    .attr('fill', '#30363d');
+
+
+
+  const nodeMap = {};
+
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+
+
+  const link = g.append('g').selectAll('line')
+
+    .data(edges).enter().append('line')
+
+    .attr('class', 'graph-edge')
+
+    .attr('stroke-width', d => Math.max(1, Math.min(4, (d.weight || 1))))
+
+    .attr('marker-end', 'url(#arrow)');
+
+
+
+  const nodeG = g.append('g').selectAll('g')
+
+    .data(nodes).enter().append('g')
+
+    .attr('class', 'graph-node')
+
+    .call(d3.drag()
+
+      .on('start', (event, d) => {
+
+        if (!event.active) sim.alphaTarget(0.3).restart();
+
+        d.fx = d.x; d.fy = d.y;
+
+      })
+
+      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+
+      .on('end', (event, d) => {
+
+        if (!event.active) sim.alphaTarget(0);
+
+        d.fx = null; d.fy = null;
+
+      })
+
+    );
+
+
+
+  nodeG.append('circle')
+
+    .attr('r', 14)
+
+    .attr('fill', d => getNodeColor(d.id))
+
+    .attr('fill-opacity', 0.85)
+
+    .attr('stroke', '#e1e4e8')
+
+    .attr('stroke-width', 2);
+
+
+
+  nodeG.append('text')
+
+    .attr('class', 'node-label')
+
+    .attr('dy', 26)
+
+    .attr('text-anchor', 'middle')
+
+    .text(d => {
+
+      const name = (d.id || '').split(/[/\\]/).pop().replace(/\.exe$/i, '');
+
+      return name.length > 14 ? name.slice(0, 12) + '…' : name;
+
+    });
+
+
+
+  nodeG.append('title').text(d => d.id);
+
+
+
+  const sim = d3.forceSimulation(nodes)
+
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(80))
+
+    .force('charge', d3.forceManyBody().strength(-200))
+
+    .force('center', d3.forceCenter(W / 2, H / 2))
+
+    .force('collision', d3.forceCollide(24));
+
+
+
+  state.graphSim = sim;
+
+
+
+  sim.on('tick', () => {
+
+    link
+
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+
+    nodeG.attr('transform', d => `translate(${d.x},${d.y})`);
+
+  });
+
+}
+
+
+
+function graphZoomIn() {
+
+  if (graphSvgRoot && graphZoomBehavior)
+
+    graphSvgRoot.transition().duration(300).call(graphZoomBehavior.scaleBy, 1.4);
+
+}
+
+
+
+function graphZoomOut() {
+
+  if (graphSvgRoot && graphZoomBehavior)
+
+    graphSvgRoot.transition().duration(300).call(graphZoomBehavior.scaleBy, 0.7);
+
+}
+
+
+
+function resetGraphZoom() {
+
+  if (graphSvgRoot && graphZoomBehavior)
+
+    graphSvgRoot.transition().duration(400).call(graphZoomBehavior.transform, d3.zoomIdentity);
+
+}
+
+
+
+// ─── TIMELINE ─────────────────────────────────────────────────────────────────
+
+async function openTimeline(systemId) {
+
+  const modal = document.getElementById('timeline-modal');
+
+  const body = document.getElementById('timeline-body');
+
+  const title = document.getElementById('timeline-modal-title');
+
+
+
+  title.textContent = ` Timeline — ${systemId}`;
+
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:#666">Loading...</div>';
+
+  modal.style.display = 'flex';
+
+
+
+  try {
+
+    const res = await apiFetch(`/api/timeline/${encodeURIComponent(systemId)}`);
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const data = await res.json();
+
+    const events = data.events || [];
+
+
+
+    if (!events.length) {
+
+      body.innerHTML = '<div class="empty-state"><div class="empty-icon"></div><p>No timeline data</p></div>';
+
+      return;
+
+    }
+
+
+
+    body.innerHTML = events.map(e => `
+
+      <div class="tl-entry">
+
+        <div class="tl-dot"></div>
+
+        <div class="tl-content">
+
+          <div class="tl-time" title="${fmtFull(e.timestamp)}">${relTime(e.timestamp)} — PID ${esc(e.pid || '?')}</div>
+
+          <div class="tl-proc">${esc(e.parent || '?')} → <strong>${esc(e.child || '?')}</strong></div>
+
+          ${e.cmdline ? `<div class="tl-cmd">${esc(e.cmdline)}</div>` : ''}
+
+        </div>
+
+      </div>
+
+    `).join('');
+
+  } catch (err) {
+
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><p>Failed to load: ${esc(err.message)}</p></div>`;
+
+  }
+
+}
+
+
+
+function closeTimelineModal() {
+
+  document.getElementById('timeline-modal').style.display = 'none';
+
+}
+
+
+
+document.getElementById('timeline-modal').addEventListener('click', (e) => {
+
+  if (e.target === e.currentTarget) closeTimelineModal();
+
+});
+
+
+
+// ─── MITRE ATT&CK HEATMAP ─────────────────────────────────────────────────────
+
+// MITRE tactic ordering + display names
+const MITRE_TACTICS = [
+  { id: 'TA0001', name: 'Initial Access' },
+  { id: 'TA0002', name: 'Execution' },
+  { id: 'TA0003', name: 'Persistence' },
+  { id: 'TA0004', name: 'Privilege Escalation' },
+  { id: 'TA0005', name: 'Defense Evasion' },
+  { id: 'TA0006', name: 'Credential Access' },
+  { id: 'TA0007', name: 'Discovery' },
+  { id: 'TA0008', name: 'Lateral Movement' },
+  { id: 'TA0009', name: 'Collection' },
+  { id: 'TA0010', name: 'Exfiltration' },
+  { id: 'TA0011', name: 'Command & Control' },
+  { id: 'TA0040', name: 'Impact' },
+];
+
+// Technique → tactic mapping (covers what the rule set uses)
+const TECH_TACTIC = {
+  'T1566': 'TA0001', 'T1190': 'TA0001', 'T1078': 'TA0001',
+  'T1059': 'TA0002', 'T1047': 'TA0002', 'T1053': 'TA0002',
+  'T1569': 'TA0002', 'T1218': 'TA0002', 'T1197': 'TA0002',
+  'T1547': 'TA0003', 'T1543': 'TA0003', 'T1546': 'TA0003',
+  'T1574': 'TA0003', 'T1136': 'TA0003',
+  'T1548': 'TA0004', 'T1055': 'TA0004', 'T1134': 'TA0004',
+  'T1562': 'TA0005', 'T1070': 'TA0005', 'T1036': 'TA0005',
+  'T1027': 'TA0005', 'T1620': 'TA0005', 'T1112': 'TA0005',
+  'T1222': 'TA0005',
+  'T1003': 'TA0006', 'T1555': 'TA0006',
+  'T1069': 'TA0007', 'T1087': 'TA0007', 'T1082': 'TA0007',
+  'T1046': 'TA0007', 'T1482': 'TA0007',
+  'T1021': 'TA0008', 'T1570': 'TA0008',
+  'T1560': 'TA0009',
+  'T1041': 'TA0010', 'T1048': 'TA0010', 'T1567': 'TA0010',
+  'T1071': 'TA0011', 'T1095': 'TA0011', 'T1008': 'TA0011',
+  'T1105': 'TA0011',
+  'T1490': 'TA0040', 'T1486': 'TA0040', 'T1485': 'TA0040',
+  'T1098': 'TA0004',
+};
+
+// Technique display names
+const TECH_NAMES = {
+  'T1566': 'Phishing', 'T1059': 'Command & Scripting', 'T1055': 'Process Injection',
+  'T1003': 'OS Credential Dumping', 'T1548': 'Abuse Elevation Control',
+  'T1562': 'Impair Defenses', 'T1070': 'Indicator Removal', 'T1036': 'Masquerading',
+  'T1027': 'Obfuscated Files', 'T1547': 'Boot/Logon Autostart', 'T1543': 'Create/Modify Service',
+  'T1053': 'Scheduled Task/Job', 'T1021': 'Remote Services', 'T1047': 'WMI',
+  'T1071': 'App Layer Protocol', 'T1490': 'Inhibit System Recovery',
+  'T1486': 'Data Encrypted', 'T1197': 'BITS Jobs', 'T1218': 'Signed Binary Proxy',
+  'T1105': 'Ingress Tool Transfer', 'T1046': 'Network Service Scan',
+  'T1069': 'Permission Groups Disc.', 'T1082': 'System Info Discovery',
+  'T1112': 'Modify Registry', 'T1574': 'Hijack Exec Flow', 'T1620': 'Reflective Load',
+  'T1078': 'Valid Accounts', 'T1098': 'Account Manipulation',
+  'T1136': 'Create Account', 'T1569': 'System Services',
+  'T1222': 'File/Dir Permissions', 'T1560': 'Archive Collected Data',
+  'T1048': 'Exfil Over Alt Protocol', 'T1041': 'Exfil Over C2',
+  'T1095': 'Non-App Layer Protocol', 'T1546': 'Event Triggered Exec',
+};
+
+function _heatColor(count, max) {
+  if (count === 0) return '#f0f4fa';
+  const ratio = Math.min(count / Math.max(max, 1), 1);
+  if (ratio < 0.2) return '#c8ddf7';
+  if (ratio < 0.4) return '#7fb3ef';
+  if (ratio < 0.65) return '#3a7fd4';
+  if (ratio < 0.85) return '#1a4fa0';
+  return '#7c0000';
+}
+
+function _heatTextColor(count, max) {
+  const ratio = Math.min(count / Math.max(max, 1), 1);
+  return ratio > 0.4 ? '#fff' : '#1a1d23';
+}
+
+async function loadMitreHeatmap() {
+  const sid = document.getElementById('mitre-sys-filter').value;
+  const url = sid ? `/api/mitre_heatmap?system_id=${encodeURIComponent(sid)}` : '/api/mitre_heatmap';
+  try {
+    const res = await apiFetch(url, { headers: { 'API-Key': EDR_API_KEY } });
+    if (!res.ok) { console.warn('MITRE heatmap fetch failed', res.status); return; }
+    const data = await res.json();
+    _renderMitreHeatmap(data);
+  } catch (e) {
+    console.error('MITRE heatmap error:', e);
+  }
+}
+
+function _renderMitreHeatmap(data) {
+  const hits = data.technique_hits || {};   // { 'T1059': { count, last_seen, description } }
+  const total = Object.values(hits).reduce((s, v) => s + v.count, 0);
+  const techIds = Object.keys(hits);
+  const maxCount = Math.max(...Object.values(hits).map(v => v.count), 1);
+
+  // Populate system filter dropdown
+  const sysSel = document.getElementById('mitre-sys-filter');
+  if (data.systems && sysSel.options.length === 1) {
+    data.systems.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      sysSel.appendChild(o);
+    });
+  }
+
+  // Stats
+  document.getElementById('mitre-tech-count').textContent = techIds.length;
+  const tacticsSeen = new Set(techIds.map(t => TECH_TACTIC[t.substring(0,5)] || 'unknown'));
+  tacticsSeen.delete('unknown');
+  document.getElementById('mitre-tactic-count').textContent = tacticsSeen.size;
+  document.getElementById('mitre-total-hits').textContent = total;
+  document.getElementById('mitre-grid-badge').textContent =
+    `${techIds.length} techniques across ${tacticsSeen.size} tactics`;
+
+  const topEntry = Object.entries(hits).sort((a, b) => b[1].count - a[1].count)[0];
+  if (topEntry) {
+    document.getElementById('mitre-top-tech').textContent = topEntry[0];
+    document.getElementById('mitre-top-tech-name').textContent =
+      TECH_NAMES[topEntry[0].substring(0,5)] || topEntry[1].description || topEntry[0];
+  }
+
+  // Build grid grouped by tactic
+  const grid = document.getElementById('mitre-heatmap-grid');
+  if (!techIds.length) {
+    grid.innerHTML = '<div class="empty-state" style="padding:40px"><p>No MITRE technique data yet. Alerts with technique IDs will appear here.</p></div>';
+    document.getElementById('mitre-table-body').innerHTML =
+      '<tr><td colspan="6"><div class="empty-state"><p>No data</p></div></td></tr>';
+    return;
+  }
+
+  // Group techniques by tactic
+  const byTactic = {};
+  MITRE_TACTICS.forEach(t => { byTactic[t.id] = []; });
+  byTactic['other'] = [];
+
+  techIds.forEach(techId => {
+    const base = techId.substring(0, 6).replace('.', '');
+    const tactic = TECH_TACTIC[techId.substring(0, 5)] || TECH_TACTIC[techId.substring(0, 6)] || 'other';
+    (byTactic[tactic] || byTactic['other']).push(techId);
+  });
+
+  let html = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">';
+  MITRE_TACTICS.forEach(tactic => {
+    const techs = byTactic[tactic.id];
+    if (!techs.length) return;
+    html += `<div style="min-width:120px;max-width:160px">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                  color:var(--muted);margin-bottom:6px;padding:0 2px;white-space:nowrap;
+                  overflow:hidden;text-overflow:ellipsis" title="${tactic.name}">${tactic.name}</div>
+      <div style="display:flex;flex-direction:column;gap:3px">`;
+    techs.sort((a, b) => (hits[b]?.count || 0) - (hits[a]?.count || 0)).forEach(techId => {
+      const info = hits[techId] || { count: 0 };
+      const bg   = _heatColor(info.count, maxCount);
+      const fg   = _heatTextColor(info.count, maxCount);
+      const name = TECH_NAMES[techId.substring(0, 5)] || info.description || techId;
+      const ts   = info.last_seen ? new Date(info.last_seen * 1000).toLocaleString() : '—';
+      html += `<div title="${esc(techId)}: ${esc(name)}&#10;Hits: ${info.count}&#10;Last: ${ts}"
+        style="background:${bg};color:${fg};border-radius:4px;padding:5px 7px;
+               font-size:10px;font-weight:600;cursor:default;transition:opacity .15s;
+               border:1px solid rgba(0,0,0,.08)"
+        onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div style="font-family:monospace">${esc(techId)}</div>
+        <div style="font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                    opacity:.85;margin-top:1px">${esc(name)}</div>
+        <div style="font-size:10px;font-weight:800;margin-top:2px">${info.count}</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+
+  // Other / unknown tactic
+  if (byTactic['other'].length) {
+    html += `<div style="min-width:120px;max-width:160px">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                  color:var(--muted);margin-bottom:6px">Other</div>
+      <div style="display:flex;flex-direction:column;gap:3px">`;
+    byTactic['other'].forEach(techId => {
+      const info = hits[techId] || { count: 0 };
+      const bg = _heatColor(info.count, maxCount);
+      const fg = _heatTextColor(info.count, maxCount);
+      html += `<div title="${esc(techId)}: ${info.count} hits"
+        style="background:${bg};color:${fg};border-radius:4px;padding:5px 7px;
+               font-size:10px;font-weight:600;cursor:default;border:1px solid rgba(0,0,0,.08)">
+        <div style="font-family:monospace">${esc(techId)}</div>
+        <div style="font-size:10px;font-weight:800;margin-top:2px">${info.count}</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  grid.innerHTML = html;
+
+  // Top techniques table
+  const sorted = Object.entries(hits).sort((a, b) => b[1].count - a[1].count).slice(0, 25);
+  const tbody = document.getElementById('mitre-table-body');
+  if (!sorted.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No data</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = sorted.map(([techId, info]) => {
+    const tacticId = TECH_TACTIC[techId.substring(0, 5)] || '—';
+    const tacticName = (MITRE_TACTICS.find(t => t.id === tacticId) || {}).name || tacticId;
+    const name = TECH_NAMES[techId.substring(0, 5)] || info.description || techId;
+    const pct = Math.round((info.count / maxCount) * 100);
+    const barColor = pct > 65 ? 'high' : pct > 30 ? 'med' : 'low';
+    const ts = info.last_seen ? relTime(info.last_seen) : '—';
+    return `<tr>
+      <td class="td-mono">${esc(techId)}</td>
+      <td>${esc(name)}</td>
+      <td class="td-muted">${esc(tacticName)}</td>
+      <td style="font-weight:700;font-variant-numeric:tabular-nums">${info.count}</td>
+      <td class="td-muted">${ts}</td>
+      <td style="min-width:100px">
+        <div class="score-bar-wrap">
+          <div class="score-bar"><div class="score-bar-fill ${barColor}" style="width:${pct}%"></div></div>
+          <span class="score-num">${info.count}</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+
+async function exportData(fmt) {
+
+  try {
+
+    const res = await apiFetch(`/api/export?format=${fmt}`, { headers: { 'API-Key': EDR_API_KEY } });
+
+    if (!res.ok) { showToast('HIGH', 'Export Failed', 'Unauthorized or server error.', 'HIGH'); return; }
+
+    const blob = await res.blob();
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+
+    a.href = url; a.download = `edr-export.${fmt}`; a.click();
+
+    URL.revokeObjectURL(url);
+
+  } catch (e) {
+
+    showToast('HIGH', 'Export Failed', e.message, 'HIGH');
+
+  }
+
+}
+
+
+
+// ─── POLL ─────────────────────────────────────────────────────────────────────
+
+fetchStatus();
+
+document.getElementById('sse-label').textContent = 'Polling every 3s';
+
+setInterval(fetchStatus, 3000);
+
+
+
+// Resize chart on window resize
+
+window.addEventListener('resize', () => {
+
+  if (state.alerts.length) renderRiskChart();
+
+});
+
+</script>
+
+</body>
+
+</html>
+
+
+
+</body></html>

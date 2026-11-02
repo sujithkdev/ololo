@@ -1,0 +1,24 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      EDR_API_KEY: ${EDR_API_KEY:?Set EDR_API_KEY in .env}
+      EDR_JWT_SECRET: ${EDR_JWT_SECRET:?Set EDR_JWT_SECRET in .env}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?Set FLASK_SECRET_KEY in .env}
+      EDR_DATA_DIR: /var/lib/behedr
+      EDR_LOG_DIR: /var/log/behedr
+      EDR_HOST: "0.0.0.0"
+      EDR_TLS_ENABLED: "false"
+      EDR_DEV_MODE: "false"
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - server-data:/var/lib/behedr
+      - server-logs:/var/log/behedr
+    restart: unless-stopped
+volumes:
+  server-data:
+  server-logs:

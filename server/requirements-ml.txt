@@ -1,0 +1,4 @@
+# Experimental; optional models require separate validation.
+tensorflow>=2.15
+torch>=2.1
+dgl>=1.1
